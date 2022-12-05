@@ -1,42 +1,42 @@
 #!/usr/bin/env bash
 
-set -eo pipefail
+set -euo pipefail
 
-if [ $UID -ne 0 ]; then
+if [ "$UID" -ne 0 ]; then
     echo "must be run as root" >&2
     exit 1
 fi
 
-if [ -z $1 ]; then
+if [ $# -ne 1 ]; then
     echo "usage: $0 <name>" >&2
     exit 1
 fi
 
-CLOUD_URL=https://cloud.debian.org/images/cloud/bullseye/latest
-IMAGE_NAME=debian-11-generic-amd64.qcow2
-VM_NAME=$1
-IMAGE_PATH=/var/lib/libvirt/images/$VM_NAME.qcow2
+CLOUD_URL="https://cloud.debian.org/images/cloud/bullseye/latest"
+IMAGE_NAME="debian-11-generic-amd64.qcow2"
+VM_NAME="$1"
+IMAGE_PATH="/var/lib/libvirt/images/$VM_NAME.qcow2"
 
 rm -rf build
 mkdir build
 cd build
 
-wget $CLOUD_URL/$IMAGE_NAME
-wget $CLOUD_URL/SHA512SUMS
+wget "$CLOUD_URL/$IMAGE_NAME"
+wget "$CLOUD_URL/SHA512SUMS"
 
 if ! sha512sum --ignore-missing -c SHA512SUMS; then
     echo "download error" >&2
     exit 1
 fi
 
-qemu-img resize $IMAGE_NAME 10G
-mv $IMAGE_NAME $IMAGE_PATH
+qemu-img resize "$IMAGE_NAME" 10G
+mv "$IMAGE_NAME" "$IMAGE_PATH"
 
 virt-install \
-  --name $VM_NAME \
+  --name "$VM_NAME" \
   --vcpus 1 \
   --memory 512 \
-  --disk $IMAGE_PATH,bus=virtio \
+  --disk "$IMAGE_PATH,bus=virtio" \
   --cloud-init user-data=../cloud-init.cfg \
   --os-variant debian11 \
   --virt-type kvm \
