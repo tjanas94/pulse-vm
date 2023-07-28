@@ -12,8 +12,8 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-CLOUD_URL="https://cloud.debian.org/images/cloud/bullseye/latest"
-IMAGE_NAME="debian-11-generic-amd64.qcow2"
+CLOUD_URL="https://cloud.debian.org/images/cloud/bookworm/latest"
+IMAGE_NAME="debian-12-generic-amd64.qcow2"
 VM_NAME="$1"
 IMAGE_PATH="/var/lib/libvirt/images/$VM_NAME.qcow2"
 
@@ -29,8 +29,13 @@ if ! sha512sum --ignore-missing -c SHA512SUMS; then
     exit 1
 fi
 
+virsh undefine "$VM_NAME" --remove-all-storage || true
 qemu-img resize "$IMAGE_NAME" 10G
 mv "$IMAGE_NAME" "$IMAGE_PATH"
+
+virsh net-update default add ip-dhcp-host \
+  "<host mac='52:54:00:c5:35:6a' name='vpn' ip='192.168.122.254' />" \
+  --live --config || true
 
 virt-install \
   --name "$VM_NAME" \
@@ -40,6 +45,8 @@ virt-install \
   --cloud-init user-data=../cloud-init.cfg \
   --os-variant debian11 \
   --virt-type kvm \
-  --network network=default,model=virtio \
+  --network network=default,model=virtio,mac=52:54:00:c5:35:6a \
   --noautoconsole \
+  --video qxl \
+  --channel spicevmc \
   --import
